@@ -6,7 +6,7 @@
 Introduction
 ============
 
-**lsstools** is a Python library for data analysis in the field of large-scale structures.
+**lsstools** is a Python library for large-scale structures analysis.
 
 Contents
 ========

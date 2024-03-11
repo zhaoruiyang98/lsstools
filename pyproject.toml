@@ -1,6 +1,6 @@
 [project]
 name = "lsstools"
-description = "Tools for large-scale structure data analysis"
+description = "Tools for large-scale structure analysis"
 readme = "README.md"
 license = { file = "LICENSE" }
 keywords = ["cosmology", "large-scale structures"]

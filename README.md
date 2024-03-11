@@ -1,2 +1,2 @@
 # lsstools
-Tools for large-scale structure data analysis
+Tools for large-scale structure analysis

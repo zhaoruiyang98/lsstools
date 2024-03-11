@@ -27,5 +27,6 @@
    :toctree:
    :recursive:
 
+   lsstools.math
    lsstools.static_typing
 
