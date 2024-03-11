@@ -1,0 +1,53 @@
+[project]
+name = "lsstools"
+description = "Tools for large-scale structure data analysis"
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["cosmology", "large-scale structures"]
+authors = [{ name = "Ruiyang Zhao", email = "zhaoruiyang19@mails.ucas.edu.cn" }]
+maintainers = [
+    { name = "Ruiyang Zhao", email = "zhaoruiyang19@mails.ucas.edu.cn" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Typing :: Typed",
+]
+dynamic = ["version"]
+
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.22", "scipy", "pandas"]
+
+[project.optional-dependencies]
+docs = ["sphinx", "numpydoc", "pydata-sphinx-theme", "nbsphinx"]
+
+[project.urls]
+"Homepage" = "https://github.com/zhaoruiyang98/lsstools"
+"Bug Reports" = "https://github.com/zhaoruiyang98/lsstools/issues"
+"Source" = "https://github.com/zhaoruiyang98/lsstools"
+
+[tool.setuptools]
+packages = ["lsstools"]
+package-data = { lsstools = ["py.typed"] }
+
+[tool.setuptools.dynamic]
+version = { attr = "lsstools.__version__" }
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+addopts = "-ra --color=yes"
+
+[tool.black]
+line-length = 100
+
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
