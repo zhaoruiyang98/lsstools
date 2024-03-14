@@ -1,0 +1,10 @@
+[run]
+branch = True
+source = lsstools/
+data_file = tests/.coverage
+
+[xml]
+output = tests/coverage.xml
+
+[html]
+directory = tests/htmlcov

@@ -43,7 +43,7 @@ version = { attr = "lsstools.__version__" }
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
-addopts = "-ra --color=yes"
+addopts = "-ra --color=yes --cov --cov-report=xml --cov-config=.coveragerc"
 
 [tool.black]
 line-length = 100

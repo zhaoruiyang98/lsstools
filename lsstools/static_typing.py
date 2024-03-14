@@ -12,6 +12,12 @@ Type alias
       - `TypeAlias` of ``Sequence[float] | NDArray[np.floating]``
     * - :obj:`ArrayLikeComplex`
       - `TypeAlias` of ``Sequence[complex] | NDArray[np.complexfloating]``
+    * - :obj:`NDArrayInt`
+      - `TypeAlias` of ``NDArray[np.integer]``
+    * - :obj:`NDArayFloat`
+      - `TypeAlias` of ``NDArray[np.floating]``
+    * - :obj:`NDArrayComplex`
+      - `TypeAlias` of ``NDArray[np.complexfloating]``
 
 Imported symbols
 ----------------
@@ -165,9 +171,27 @@ from numpy.typing import DTypeLike as DTypeLike
 from numpy.typing import NDArray as NDArray
 
 
-ArrayLikeInt: TypeAlias = Sequence[int] | NDArray[np.integer]
-ArrayLikeFloat: TypeAlias = Sequence[float] | NDArray[np.floating]
-ArrayLikeComplex: TypeAlias = Sequence[complex] | NDArray[np.complexfloating]
+ArrayLikeInt: TypeAlias = (
+    Sequence[int]
+    | Sequence[Sequence[int]]
+    | Sequence[Sequence[Sequence[int]]]
+    | NDArray[np.integer]
+)
+ArrayLikeFloat: TypeAlias = (
+    Sequence[float]
+    | Sequence[Sequence[float]]
+    | Sequence[Sequence[Sequence[float]]]
+    | NDArray[np.floating]
+)
+ArrayLikeComplex: TypeAlias = (
+    Sequence[complex]
+    | Sequence[Sequence[complex]]
+    | Sequence[Sequence[Sequence[complex]]]
+    | NDArray[np.complexfloating]
+)
+NDArrayInt: TypeAlias = NDArray[np.integer]
+NDArrayFloat: TypeAlias = NDArray[np.floating]
+NDArrayComplex: TypeAlias = NDArray[np.complexfloating]
 
 
 def assert_never(arg: NoReturn, /) -> NoReturn:
