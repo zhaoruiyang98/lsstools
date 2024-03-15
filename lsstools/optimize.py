@@ -82,10 +82,14 @@ def lsq_polynomial_fit(
     y: ArrayLikeFloat,
     deg: ArrayLikeInt,
     roots: Sequence[tuple[float, float]] | None = None,
+    deriv_roots: Sequence[tuple[float, float]] | None = None,
     full_output: bool = False,
     **kwargs,
 ) -> Any:
     """Polynomial fit with linear least-squares.
+
+    If `roots` or `deriv_roots` are provided, a least-squares problem with linear constraints would
+    be solved using :func:`lsq_linear_constr`.
 
     Parameters
     ----------
@@ -99,6 +103,8 @@ def lsq_polynomial_fit(
         degrees of the terms to include may be used instead.
     roots : Sequence[tuple[float, float]], optional
         The roots of polynomials, by default None.
+    deriv_roots : Sequence[tuple[float, float]], optional
+        The roots of polynomials' derivatives, by default None.
     full_output : bool, optional
         Return :class:`scipy.optimize.OptimizeResult` as well, by default False.
     **kwargs : dict, optional
@@ -119,16 +125,31 @@ def lsq_polynomial_fit(
         deg = sorted(deg)  # type: ignore
     else:
         deg = list(range(deg + 1))
-    roots = roots or []
-    if len(roots) > len(deg):
-        raise ValueError("polynomial is fully determined by roots")
+    roots, deriv_roots = roots or [], deriv_roots or []
+    if len(roots) + len(deriv_roots) > len(deg):
+        raise ValueError("polynomial is fully determined by roots and deriv_roots")
     basis: NDArrayFloat = np.array(deg)
     A: NDArrayFloat = np.asarray(x)[:, newaxis] ** basis[newaxis, :]
-    if not roots:
-        res = scipy.optimize.lsq_linear(A, y, **kwargs)
-    else:
+    L, d = None, None
+    if roots:
         L = np.array([_[0] for _ in roots])[:, newaxis] ** basis[newaxis, :]
         d = [_[-1] for _ in roots]
+    if deriv_roots:
+        power = basis - 1
+        if power[0] == -1:
+            power[0] = 0
+        LL = (
+            np.array([_[0] for _ in deriv_roots])[:, newaxis] ** power[newaxis, :]
+            * basis[newaxis, :]
+        )
+        dd = [_[-1] for _ in deriv_roots]
+        if L is None or d is None:
+            L, d = LL, dd
+        else:
+            L, d = np.vstack([L, LL]), np.hstack([d, dd])
+    if L is None or d is None:
+        res = scipy.optimize.lsq_linear(A, y, **kwargs)
+    else:
         res = lsq_linear_constr(A, y, L, d, full_result=False, **kwargs)
     coef = res.x
     _result: list = [None] * (deg[-1] + 1)

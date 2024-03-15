@@ -47,6 +47,8 @@ html_css_files = ["custom.css"]
 html_context = {"default_mode": "light"}
 html_copy_source = False
 
+python_maximum_signature_line_length = 88
+
 autosummary_generate = True
 autosummary_ignore_module_all = False
 latex_engine = "xelatex"
@@ -70,4 +72,13 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+}
+
+autodoc_type_aliases = {
+    "ArrayLikeInt": "ArrayLikeInt",
+    "ArrayLikeFloat": "ArrayLikeFloat",
+    "ArrayLikeComplex": "ArrayLikeComplex",
+    "NDArrayInt": "NDArrayInt",
+    "NDArrayFloat": "NDArrayFloat",
+    "NDArrayComplex": "NDArrayComplex",
 }

@@ -26,3 +26,8 @@ def test_lsq_polynomial_fit():
     assert np.allclose(poly.coef[0], c0, rtol=1e-2, atol=1e-2)
     assert np.allclose(np.sum(poly.coef), c0 + c1 + c4, rtol=1e-2, atol=1e-2)
     assert np.allclose(poly.coef, [c0, c1, 0, 0, c4], rtol=1e-2, atol=1e-2)
+
+    poly = lsq_polynomial_fit(x, y, deg=[0, 1, 4], roots=[(1, c0 + c1 + c4)], deriv_roots=[(0, c1)])
+    assert np.allclose(np.sum(poly.coef), c0 + c1 + c4, rtol=1e-2, atol=1e-2)
+    assert np.allclose(poly.coef[1], c1, rtol=1e-2, atol=1e-2)
+    assert np.allclose(poly.coef, [c0, c1, 0, 0, c4], rtol=1e-2, atol=1e-2)
