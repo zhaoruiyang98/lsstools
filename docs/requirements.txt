@@ -1,0 +1,8 @@
+setuptools>=61.0.0
+numpy>=1.22
+scipy
+pandas
+sphinx
+numpydoc
+pydata-sphinx-theme
+nbsphinx

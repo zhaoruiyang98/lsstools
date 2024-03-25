@@ -1,4 +1,4 @@
-﻿lsstools.optimize
+lsstools.optimize
 =================
 
 .. automodule:: lsstools.optimize
