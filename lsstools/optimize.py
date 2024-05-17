@@ -80,7 +80,7 @@ def lsq_linear_constr(
 def lsq_polynomial_fit(
     x: ArrayLikeFloat,
     y: ArrayLikeFloat,
-    deg: ArrayLikeInt,
+    deg: int | ArrayLikeInt,
     roots: Sequence[tuple[float, float]] | None = None,
     deriv_roots: Sequence[tuple[float, float]] | None = None,
     full_output: bool = False,

@@ -72,6 +72,7 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "mpi4py": ("https://mpi4py.readthedocs.io/en/stable", None),
 }
 
 autodoc_type_aliases = {
