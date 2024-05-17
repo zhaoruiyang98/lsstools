@@ -9,11 +9,14 @@ Constant
     * - `COMM_WORLD`
       - `mpi4py.MPI.COMM_WORLD`
 """
+
 from __future__ import annotations
 from .static_typing import *
 
 if TYPE_CHECKING:
     from mpi4py.MPI import Intracomm
+else:
+    Intracomm = None
 
 
 try:
