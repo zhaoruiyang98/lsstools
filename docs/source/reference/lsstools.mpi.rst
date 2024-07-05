@@ -1,4 +1,4 @@
-﻿lsstools.mpi
+lsstools.mpi
 ============
 
 .. automodule:: lsstools.mpi

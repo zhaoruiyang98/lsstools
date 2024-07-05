@@ -1,4 +1,4 @@
-﻿lsstools.log
+lsstools.log
 ============
 
 .. automodule:: lsstools.log
