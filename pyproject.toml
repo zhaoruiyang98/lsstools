@@ -23,7 +23,7 @@ classifiers = [
 dynamic = ["version"]
 
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.22", "scipy", "pandas"]
+dependencies = ["numpy>=1.22", "matplotlib>=3.6.0", "scipy", "pandas", "pyyaml"]
 
 [project.optional-dependencies]
 docs = ["sphinx", "numpydoc", "pydata-sphinx-theme", "nbsphinx"]

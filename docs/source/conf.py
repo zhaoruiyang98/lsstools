@@ -29,6 +29,12 @@ extensions = [
 templates_path = ["_templates"]
 exclude_patterns = []
 default_role = "py:obj"
+autosummary_mock_imports = ["lsstools.ex"]
+numpydoc_validation_exclude = {
+    "lsstools.log",
+    "lsstools.container.StaticMapping",
+    "lsstools.container.NestedDict",
+}
 
 
 # -- Options for HTML output -------------------------------------------------

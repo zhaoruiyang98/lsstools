@@ -4,7 +4,7 @@ from .mpi import COMM_WORLD
 from .static_typing import *
 
 if TYPE_CHECKING:
-    from mpi4py.MPI import Intracomm
+    from mpi4py.MPI import Intracomm  # type: ignore
 
 
 def get_mpi_logger(name: str, mpicomm: Intracomm = COMM_WORLD) -> MPILogger:

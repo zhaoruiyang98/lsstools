@@ -1,13 +1,15 @@
 import ast
 import enum
 import graphlib
-import math
 import numpy as np
 import re
 import yaml
 from collections import deque, UserString, UserDict
 from decimal import Decimal
+from ..utils import format_collection
 from ..static_typing import *
+
+
 import yaml.composer
 import yaml.scanner
 
@@ -90,42 +92,6 @@ def common_type(types: Sequence[type]) -> type:
         else:
             return object
     return common
-
-
-def format_collection(c: Collection, nmax: int = 5, sep: str = ", ") -> str:
-    if isinstance(c, str):
-        return c
-    type = c.__class__
-    if type is list:
-        sbegin, send = "[", "]"
-    elif type is tuple:
-        sbegin, send = "(", ")"
-    elif type is set or type is dict:
-        sbegin, send = "{", "}"
-    elif type is frozenset:
-        sbegin, send = "frozenset({", "})"
-    elif type is np.ndarray:
-        sbegin, send = "array([", "])"
-    else:
-        sbegin, send = f"{type.__name__}(", ")"
-
-    if len(c) <= nmax:
-        smid = sep.join(map(str, c))
-    else:
-        ileft = math.ceil(nmax / 2)
-        iright = len(c) - (nmax - ileft)
-        items: list[str] = []
-        if isinstance(c, Mapping):
-            for i, (k, v) in enumerate(c.items()):
-                if i < ileft or i >= iright:
-                    items.append(f"{k}: {v}")
-        else:
-            for i, x in enumerate(c):
-                if i < ileft or i >= iright:
-                    items.append(str(x))
-        items.insert(ileft, "...")
-        smid = sep.join(items)
-    return f"{sbegin}{smid}{send}"
 
 
 def is_magic_expr(expr: str) -> bool:
