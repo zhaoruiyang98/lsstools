@@ -52,6 +52,7 @@ class Scheduler:
             f"#SBATCH -N {self.nodes}\n"
             f"#SBATCH -n {self.nprocs}\n"
             f"#SBATCH -c {self.cpus_per_task}\n"
+            f"#SBATCH --mem=0\n"
         )
         # fmt: on
         if self.partition:
