@@ -23,6 +23,12 @@ class optional(Generic[_T]):
     def parse(self, value: str):
         if value == "None":
             return type(self)(type=self.type, value=None)
+        if self.type == bool:
+            if value in ("True", "true"):
+                return type(self)(type=self.type, value=True)
+            if value in ("False", "false"):
+                return type(self)(type=self.type, value=True)
+            raise ValueError
         return type(self)(type=self.type, value=self.type(value))
 
 
