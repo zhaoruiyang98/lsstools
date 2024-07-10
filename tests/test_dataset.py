@@ -197,16 +197,27 @@ def test_dataset_iter():
         options=[Option("A", default="a"), Option("B", choices=["b1", "b2", "b3"]), "C"],
         derived={"D": "{A} {B}", "E": "{C}", "F": "{D} {B} {E}", "G": "{F}"},
     )
+    with pytest.raises(KeyError):
+        ds.iter_list("F", Z1=1)
+    with pytest.raises(ValueError):
+        ds.iter_list("D", ignore_redundant=False, C="c1")
     with pytest.raises(NodeEvaluationError):
         set(ds.iter("F"))
     # default
     assert set(ds.iter("F", C="C")) == set(["a b1 b1 C", "a b2 b2 C", "a b3 b3 C"])
     # replaceholder rule
-    assert set(ds.iter("F", C=["c1", "c2"], B=...)) == set(
+    with pytest.raises(ValueError):
+        assert ds.iter_list("F", C="c1", B=...)
+    with pytest.raises(ValueError):
+        assert ds.iter_list("F", C="c1", A=[...])
+    with pytest.raises(ValueError):
+        ds.iter_list("G", F=...)
+    assert ds.iter_list("F", A=..., B="b1", C="c1") == ["a b1 b1 c1"]
+    assert set(ds.iter("F", C=["c1", "c2"], B=[...])) == set(
         ["a b1 b1 c1", "a b2 b2 c1", "a b3 b3 c1", "a b1 b1 c2", "a b2 b2 c2", "a b3 b3 c2"]
     )
-    assert ds.iter_list("F", C=["c1", "c2"], B=...) == ds.iter_list("F", C=["c1", "c2"])
-    assert ds.iter_list("F", C=["c1", "c2"], B=...) != ds.iter_list("F", B=..., C=["c1", "c2"])
+    assert ds.iter_list("F", C=["c1", "c2"], B=[...]) == ds.iter_list("F", C=["c1", "c2"])
+    assert ds.iter_list("F", C=["c1", "c2"], B=[...]) != ds.iter_list("F", B=[...], C=["c1", "c2"])
     # extended evaluation rule
     assert ds.iter_list("F", F="F") == ["F"]
     assert set(ds.iter("G", F=["f1", "f2", "f3"])) == set(["f1", "f2", "f3"])

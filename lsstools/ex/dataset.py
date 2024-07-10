@@ -862,8 +862,8 @@ class Dataset:
 
         Notes
         -----
-        This method will keep the ordering specified by option_spec. One can use ... as the placeholder to take default
-        value or choices.
+        This method will keep the ordering specified by option_spec. One can use ... or [...]
+        as the placeholder to take default value or choices.
         """
         import itertools
 
@@ -888,26 +888,28 @@ class Dataset:
         # regularize input
         param_values_dict: dict[str, Iterable] = {}
         for option_name, value in option_spec.items():
-            if value is not ...:
+            if value != ... and value != [...]:
                 # make list
                 param_values_dict[option_name] = (
                     value if isinstance(value, (tuple, list)) else [value]
                 )
             else:
-                # placeholder ...
+                # placeholder ... or [...]
                 input_options_mapping: dict[str, Option] = {
                     _.name: _ for _ in self.options(to_str=False)
                 }
                 if option_name not in input_options_mapping:
                     # derived
-                    raise ValueError(f"derived node cannot use ... as the placeholder")
+                    raise ValueError(f"derived node cannot use {value} as the placeholder")
                 option = input_options_mapping[option_name]
-                if option.choices is not option.ANY:
-                    param_values_dict[option_name] = option.choices
-                else:
+                if value is ...:
                     if option.default is option.MISSING:
-                        continue
+                        raise ValueError(f"option {option} does not have a default value")
                     param_values_dict[option_name] = [option.default]
+                else:
+                    if option.choices is option.ANY:
+                        raise ValueError(f"option {option} is not bounded")
+                    param_values_dict[option_name] = option.choices
         # inherit default option value and choices if not specified
         for input_node in g.inputs():
             if input_node.name not in param_values_dict:
