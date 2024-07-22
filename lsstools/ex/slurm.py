@@ -206,6 +206,7 @@ class TaskManager:
     def _get_parser(self):
         task = self.tasks[0]
         parser = argparse.ArgumentParser()
+        # TODO: better type inference
         for name, value in task.items():
             if value is None:
                 raise TypeError(

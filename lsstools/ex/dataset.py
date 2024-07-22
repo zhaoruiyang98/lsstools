@@ -548,14 +548,6 @@ class FunctorGraph(DAGGraph[FunctorNode]):
                 results[node.name] = override
         return results[str(_name)]
 
-    def take(
-        self, _name: Any, _default: _S = None, /, *, ignore_redundant=True, **option_spec
-    ) -> _S:
-        try:
-            return self.value(_name, ignore_redundant=ignore_redundant, **option_spec)
-        except NodeEvaluationError:
-            return _default
-
 
 class BaseFunctorNode(FunctorNode):
     def __call__(self, **kwargs):
@@ -932,10 +924,16 @@ class Dataset:
     def value(self, _name: Any, /, *, ignore_redundant=True, **option_spec):
         return self.graph.value(_name, ignore_redundant=ignore_redundant, **option_spec)
 
-    def take(
+    def take(self, _name: Any, /, *, ignore_redundant=True, **option_spec):
+        return self.value(_name, ignore_redundant=ignore_redundant, **option_spec)
+
+    def get(
         self, _name: Any, _default: _S = None, /, *, ignore_redundant=True, **option_spec
     ) -> _S:
-        return self.graph.take(_name, _default, ignore_redundant=ignore_redundant, **option_spec)
+        try:
+            return self.value(_name, ignore_redundant=ignore_redundant, **option_spec)
+        except NodeEvaluationError:
+            return _default
 
     def graph_repr(self):
         return {k.name: set(_.name for _ in v) for k, v in self.graph.data.items()}
