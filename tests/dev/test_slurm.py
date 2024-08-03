@@ -1,8 +1,8 @@
 from lsstools.mpi import COMM_WORLD
-from lsstools.ex.slurm import Scheduler, TaskManager, optional
+from lsstools.ex.slurm import Scheduler, TaskManager
 
 
-def main(x, y, z="X", random_fail=optional(bool)):
+def main(x, y, z: str = "X", random_fail: bool = True):
     from random import random
 
     if random_fail and random() < 0.1:

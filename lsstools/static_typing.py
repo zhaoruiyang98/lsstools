@@ -61,6 +61,8 @@ Imported symbols
       - Mark a protocol class as a runtime protocol.
     * - `typing.Any`
       - Special type indicating an unconstrained type.
+    * - :obj:`typing.Annotated`
+      - Special typing form to add context-specific metadata to an annotation.
     * - :obj:`typing.ClassVar`
       - Special type construct to mark class variables.
     * - :obj:`typing.Concatenate`
@@ -82,6 +84,8 @@ Imported symbols
       - Typed version of :func:`collections.namedtuple`.
     * - :obj:`typing.NoReturn`
       - Special type indicating that a function never returns.
+    * - :obj:`typing.Optional`
+      - Optional[X] is equivalent to X | None (or Union[X, None]).
     * - :class:`typing.ParamSpec`
       - Parameter specification variable. A specialized version of type variables.
     * - :class:`typing.Protocol`
@@ -142,6 +146,7 @@ from typing import overload as overload
 from typing import final as final
 from typing import runtime_checkable as runtime_checkable
 from typing import Any as Any
+from typing import Annotated as Annotated
 from typing import ClassVar as ClassVar
 from typing import Concatenate as Concatenate
 from typing import Final as Final
@@ -152,6 +157,7 @@ from typing import BinaryIO as BinaryIO
 from typing import Literal as Literal
 from typing import NamedTuple as NamedTuple
 from typing import NoReturn as NoReturn
+from typing import Optional as Optional
 from typing import ParamSpec as ParamSpec
 from typing import Protocol as Protocol
 from typing import SupportsAbs as SupportsAbs

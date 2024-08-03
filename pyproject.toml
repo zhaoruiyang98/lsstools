@@ -23,7 +23,14 @@ classifiers = [
 dynamic = ["version"]
 
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.22", "matplotlib>=3.6.0", "scipy", "pandas", "pyyaml"]
+dependencies = [
+    "numpy>=1.22",
+    "matplotlib>=3.6.0",
+    "scipy",
+    "pandas",
+    "pyyaml",
+    "typer-slim",
+]
 
 [project.optional-dependencies]
 docs = ["sphinx", "numpydoc", "pydata-sphinx-theme", "nbsphinx"]
@@ -43,7 +50,7 @@ version = { attr = "lsstools.__version__" }
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
-addopts = "-ra --color=yes --cov-report xml --cov-report term --cov --cov-config=.coveragerc"
+addopts = "-ra --color=yes --cov-report xml --cov-report term --cov --cov-config=.coveragerc --ignore tests/dev"
 
 [tool.black]
 line-length = 100

@@ -1,35 +1,14 @@
 """Dirty module for submitting jobs to slurm
 """
 
-import argparse
 import inspect
 import os
 import subprocess
 import shutil
-from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
+from typing import get_type_hints
 from ..static_typing import *
-
-
-_T = TypeVar("_T")
-
-
-class optional(Generic[_T]):
-    def __init__(self, type: Callable[[Any], _T], value=None):
-        self.type = type
-        self.value = None if value is None else self.type(value)
-
-    def parse(self, value: str):
-        if value == "None":
-            return type(self)(type=self.type, value=None)
-        if self.type == bool:
-            if value in ("True", "true"):
-                return type(self)(type=self.type, value=True)
-            if value in ("False", "false"):
-                return type(self)(type=self.type, value=True)
-            raise ValueError
-        return type(self)(type=self.type, value=self.type(value))
 
 
 @dataclass
@@ -42,7 +21,7 @@ class Scheduler:
     account: str | None = None
     nodes: int = 1
     exclusive: bool = True
-    prun: str = "srun"
+    driver: str = "srun"
     prelude: str = ""
 
     def __post_init__(self):
@@ -74,65 +53,140 @@ class Scheduler:
         return s
 
 
-class TaskManager:
-    def __init__(self, func: Callable, script_path, scheduler: Scheduler, __file__=None):
-        self.func = func
-        self.script_path = Path(script_path)
-        self.scheduler = scheduler
-        if __file__ is None:
-            __file__ = inspect.stack()[-1].filename
-        self.__file__ = __file__
-        self.log_dir = self.script_path.parent / f"{self.script_path.stem}"
+def is_typer_argument(hint):
+    import typer
 
-        all_kwargs = {}
+    if metadata := getattr(hint, "__metadata__", None):
+        return isinstance(metadata[0], type(typer.Argument()))
+    return False
+
+
+def is_typer_option(hint):
+    import typer
+
+    if metadata := getattr(hint, "__metadata__", None):
+        return isinstance(metadata[0], type(typer.Option()))
+    return False
+
+
+class CommandLineFunction:
+    """Function supported by slurm.py
+
+    Attributes
+    ----------
+    func : Callable
+        main function
+    arg_names : list[str]
+        CLI positional argument names
+    option_names : list[str]
+        CLI optional argument names
+    defaults : dict[str, Any]
+        default values
+    """
+
+    def __init__(self, func) -> None:
+        self.func = func
+        self.arg_names: list[str] = []
+        self.option_names: list[str] = []
+        self.defaults: dict[str, Any] = {}
+
+        # inspect func
         sig = inspect.signature(func)
+        hints = get_type_hints(self.func, include_extras=True)
         for param in sig.parameters.values():
             if param.kind not in (param.POSITIONAL_OR_KEYWORD, param.KEYWORD_ONLY):
-                raise ValueError(f"unsupported callable {func}")
-            all_kwargs[param.name] = param.default
-        self.all_kwargs = all_kwargs
+                raise ValueError(f"unsupported callable {self.func}")
+            if (hint := hints.get(param.name)) and hasattr(hint, "__metadata__"):
+                # annotated hint might be typer.Argument or typer.Option
+                if is_typer_argument(hint):
+                    self.arg_names.append(param.name)
+                elif is_typer_option(hint):
+                    self.option_names.append(param.name)
+                else:
+                    assert_never(hint)
+            else:
+                if param.kind is param.POSITIONAL_OR_KEYWORD:
+                    if param.default is inspect.Parameter.empty:
+                        self.arg_names.append(param.name)
+                    else:
+                        self.option_names.append(param.name)
+                if param.kind is param.KEYWORD_ONLY:
+                    self.option_names.append(param.name)
+            if param.default is not inspect.Parameter.empty:
+                self.defaults[param.name] = param.default
+
+    def commandline_callstr(self, **kwargs):
+        s = []
+        for param in self.arg_names:
+            v = kwargs[param] if param in kwargs else self.defaults[param]
+            s += [str(v)]
+        for param in self.option_names:
+            v = kwargs[param] if param in kwargs else self.defaults[param]
+            param = param.replace("_", "-")
+            if v is True:
+                s += [f"--{param}"]
+            elif v is False:
+                s += [f"--no-{param}"]
+            else:
+                s += [f"--{param}", str(v)]
+        return " ".join(s)
+
+    def run(self):
+        import typer
+
+        typer.run(self.func)
+
+
+class TaskManager:
+    def __init__(self, func: Callable, script_path, scheduler: Scheduler, pyfile=None):
+        self.func = CommandLineFunction(func)
+        self.script_path = Path(script_path)
+        self.scheduler = scheduler
+        self.pyfile = inspect.stack()[-1].filename if pyfile is None else pyfile
+        self.log_dir = self.script_path.parent / f"{self.script_path.stem}"
+
         self.tasks: list[Mapping[str, Any]] = []
 
     def __call__(self, **kwargs):
-        all_kwargs = deepcopy(self.all_kwargs)
-        all_kwargs |= kwargs
-        if inspect.Parameter.empty in all_kwargs.values():
-            raise ValueError(
-                f"missing arguments: {[k for k, v in all_kwargs.items() if v is inspect.Parameter.empty]}"
-            )
-        self.tasks.append(all_kwargs)
+        # check if there are any missing arguments
+        all_parameters = set(self.func.arg_names + self.func.option_names)
+        if missing := all_parameters.difference(self.func.defaults | kwargs):
+            raise ValueError(f"missing arguments: {missing}")
+        self.tasks.append(kwargs)
 
-    @property
-    def first_run(self):
-        # XXX: should find a better way to distinguish between the first and second run...
-        if self.script_path.exists():
-            return False
-        else:
-            return True
-
-    def run(self, dump_only=False):
+    def run(self, dump_only: bool = False, direct: int | bool = False):
         if not self.tasks:
             return
-        if self.first_run or dump_only:
+        if self._is_first_run or dump_only:
             self._dump_script()
             if dump_only:
                 return
+            # important to inherit the current environment
+            options: Any = dict(shell=True, env=os.environ)
+            if direct is False:
+                subprocess.run(f"sbatch {self.script_path}", **options)
+            elif direct is True:
+                for i in range(len(self.tasks)):
+                    subprocess.run(
+                        f"export SLURM_ARRAY_TASK_ID={i}; bash {self.script_path}", **options
+                    )
             else:
-                # important to inherit the current environment
-                subprocess.run(f"sbatch {self.script_path}", shell=True, env=os.environ)
+                subprocess.run(
+                    f"export SLURM_ARRAY_TASK_ID={direct}; bash {self.script_path}", **options
+                )
         else:
-            self._run()
+            self.func.run()
 
-    def retry_failed(self):
+    def retry_failed(self, direct: int | bool = False):
         new_script = self.log_dir / (self.script_path.stem + "_retry.sh")
         if not new_script.exists():
             failed_idx = self._gather_failed_idx()
             if not failed_idx:
                 print("All succeeded!")
                 return
-            new_python_script = self.log_dir / (Path(self.__file__).stem + "_retry.py")
-            shutil.copy(src=self.__file__, dst=new_python_script)
-            old_copied_python_script = self.log_dir / Path(self.__file__).name
+            new_python_script = self.log_dir / (Path(self.pyfile).stem + "_retry.py")
+            shutil.copy(src=self.pyfile, dst=new_python_script)
+            old_copied_python_script = self.log_dir / Path(self.pyfile).name
             with open(self.script_path, "r") as f_in:
                 with open(new_script, "w") as f_out:
                     for line in f_in:
@@ -142,17 +196,32 @@ class TaskManager:
                             )
                             continue
                         f_out.write("#SBATCH --array {}\n".format(",".join(map(str, failed_idx))))
-            subprocess.run(f"sbatch {new_script}", shell=True, env=os.environ)
+            options: Any = dict(shell=True, env=os.environ)
+            if direct is False:
+                subprocess.run(f"sbatch {new_script}", **options)
+            elif direct is True:
+                for i in failed_idx:
+                    subprocess.run(f"export SLURM_ARRAY_TASK_ID={i}; bash {new_script}", **options)
+            else:
+                subprocess.run(f"export SLURM_ARRAY_TASK_ID={direct}; bash {new_script}", **options)
         else:
-            self._run()
+            self.func.run()
+
+    @property
+    def _is_first_run(self):
+        # XXX: should find a better way to distinguish between the first and second run...
+        if self.script_path.exists():
+            return False
+        else:
+            return True
 
     def _dump_script(self):
         # prepare, mkdir and copy script
         log_dir = self.log_dir
         log_dir.mkdir(parents=True, exist_ok=True)
-        copied_script_file = log_dir / Path(self.__file__).name
-        shutil.copy(src=self.__file__, dst=copied_script_file)
-        # header
+        copied_script_file = log_dir / Path(self.pyfile).name
+        shutil.copy(src=self.pyfile, dst=copied_script_file)
+        # extra header
         script = self.scheduler.header()
         output_path = log_dir / f"%a.out.log"
         script += f"#SBATCH --output={output_path}\n"
@@ -167,10 +236,8 @@ class TaskManager:
         # list
         script += "tasks=(\n"
         for task in self.tasks:
-            options = '  "'
-            for name, value in task.items():
-                options += f"--{name} {value} "
-            script += f'{options}"\n'
+            cmd = self.func.commandline_callstr(**task)
+            script += f'  "{cmd}"\n'
         script += ")\n"
 
         # launch script
@@ -182,42 +249,13 @@ class TaskManager:
         if self.scheduler.nodes == self.scheduler.nprocs == self.scheduler.cpus_per_task == 1:
             prog = f"python {_path}"
         else:
-            prog = f"{self.scheduler.prun} -n {self.scheduler.nprocs} -c {self.scheduler.cpus_per_task} python -m mpi4py {_path}"
-        script += f"{prog} ${{tasks[$SLURM_ARRAY_TASK_ID]}}\n"
+            prog = f"{self.scheduler.driver} -n {self.scheduler.nprocs} -c {self.scheduler.cpus_per_task} python -m mpi4py {_path}"
+        script += f'PROG="{prog}"\n'
+        script += "COMMAND=${tasks[$SLURM_ARRAY_TASK_ID]}\n"
+        script += f"SUCCESS_TOKEN={str(self.log_dir / 'success_')}${{SLURM_ARRAY_TASK_ID}}.txt\n"
+        script += '${PROG} ${COMMAND} && echo "${COMMAND}" > ${SUCCESS_TOKEN}\n'
         with open(self.script_path, "w") as f:
             f.write(script)
-
-    def _run(self):
-        # call self.func, read arguments from command line
-        parser = self._get_parser()
-        args = parser.parse_args()
-        kwargs = {k: getattr(args, k) for k in self.all_kwargs}
-        self.func(**kwargs)
-        from ..mpi import COMM_WORLD as comm
-        from pprint import pprint
-
-        idx = self.tasks.index(kwargs)
-        comm.Barrier()
-        if comm.rank == 0:
-            # token
-            with open(self.log_dir / f"success_{idx}.txt", "w") as f:
-                pprint(kwargs, stream=f, indent=2, sort_dicts=False)
-
-    def _get_parser(self):
-        task = self.tasks[0]
-        parser = argparse.ArgumentParser()
-        # TODO: better type inference
-        for name, value in task.items():
-            if value is None:
-                raise TypeError(
-                    f"`{name}` has default value None, please wrap it with `slurm.optional`"
-                )
-            parser.add_argument(
-                f"--{name}",
-                type=value.parse if isinstance(value, optional) else type(value),
-                required=True,
-            )
-        return parser
 
     def _gather_failed_idx(self):
         ntot = len(self.tasks)
