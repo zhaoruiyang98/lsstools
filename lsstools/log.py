@@ -1,4 +1,5 @@
 from __future__ import annotations
+import contextlib
 import logging
 from .mpi import COMM_WORLD
 from .static_typing import *
@@ -15,6 +16,20 @@ def get_mpi_logger(name: str, mpicomm: Intracomm = COMM_WORLD) -> MPILogger:
     logger.mpicomm = mpicomm
     logging.setLoggerClass(raw_logger_class)
     return logger
+
+
+@contextlib.contextmanager
+def log_root_only(logroot=0, mpicomm=None):
+    """Disable logging when mpicomm.rank != logroot."""
+    if mpicomm is None:
+        mpicomm = COMM_WORLD
+    if mpicomm.rank != logroot:
+        logging.disable(logging.INFO)
+    try:
+        yield
+    finally:
+        if mpicomm.rank != logroot:
+            logging.disable(logging.NOTSET)
 
 
 class MPILogger(logging.Logger):

@@ -137,8 +137,12 @@ class CommandLineFunction:
         typer.run(self.func)
 
 
-class TaskManager:
-    def __init__(self, func: Callable, script_path, scheduler: Scheduler, pyfile=None):
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
+
+
+class TaskManager(Generic[_P, _T]):
+    def __init__(self, func: Callable[_P, _T], script_path, scheduler: Scheduler, pyfile=None):
         self.func = CommandLineFunction(func)
         self.script_path = Path(script_path)
         self.scheduler = scheduler
@@ -147,7 +151,9 @@ class TaskManager:
 
         self.tasks: list[Mapping[str, Any]] = []
 
-    def __call__(self, **kwargs):
+    def __call__(self, *args: _P.args, **kwargs: _P.kwargs):
+        if args:
+            raise TypeError(f"positional arguments are not allowed")
         # check if there are any missing arguments
         all_parameters = set(self.func.arg_names + self.func.option_names)
         if missing := all_parameters.difference(self.func.defaults | kwargs):
