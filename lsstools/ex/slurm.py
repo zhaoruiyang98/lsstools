@@ -15,8 +15,9 @@ from ..static_typing import *
 class Scheduler:
     partition: str | None = None
     queue: str | None = None
+    constraint: str | None = None
     nprocs: int = 1
-    cpus_per_task: int = 1
+    cpus_per_task: int | None = None
     time_limit: str | None = "01:00:00"
     account: str | None = None
     nodes: int = 1
@@ -37,10 +38,13 @@ class Scheduler:
         s += (
             f"#SBATCH -N {self.nodes}\n"
             f"#SBATCH -n {self.nprocs}\n"
-            f"#SBATCH -c {self.cpus_per_task}\n"
             f"#SBATCH --mem=0\n"
         )
         # fmt: on
+        if self.cpus_per_task is not None:
+            s += f"#SBATCH -c {self.cpus_per_task}\n"
+        if self.constraint:
+            s += f"#SBATCH -C {self.constraint}\n"
         if self.partition:
             s += f"#SBATCH -p {self.partition}\n"
         if self.queue:
@@ -253,8 +257,10 @@ class TaskManager(Generic[_P, _T]):
             if not self.scheduler.prelude.endswith("\n"):
                 script += "\n"
         _path = copied_script_file
-        if self.scheduler.nodes == self.scheduler.nprocs == self.scheduler.cpus_per_task == 1:
+        if self.scheduler.nodes == self.scheduler.nprocs == 1:
             prog = f"python {_path}"
+        elif self.scheduler.cpus_per_task is None:
+            prog = f"{self.scheduler.driver} -n {self.scheduler.nprocs} python -m mpi4py {_path}"
         else:
             prog = f"{self.scheduler.driver} -n {self.scheduler.nprocs} -c {self.scheduler.cpus_per_task} python -m mpi4py {_path}"
         script += f'PROG="{prog}"\n'
