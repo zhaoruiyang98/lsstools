@@ -23,6 +23,7 @@ class Scheduler:
     nodes: int = 1
     exclusive: bool = True
     driver: str = "srun"
+    python: str = "python"
     bash_path: str = "/bin/bash"
     prelude: str = ""
 
@@ -258,11 +259,11 @@ class TaskManager(Generic[_P, _T]):
                 script += "\n"
         _path = copied_script_file
         if self.scheduler.nodes == self.scheduler.nprocs == 1:
-            prog = f"python {_path}"
+            prog = f"{self.scheduler.python} {_path}"
         elif self.scheduler.cpus_per_task is None:
-            prog = f"{self.scheduler.driver} -n {self.scheduler.nprocs} python -m mpi4py {_path}"
+            prog = f"{self.scheduler.driver} -n {self.scheduler.nprocs} {self.scheduler.python} -m mpi4py {_path}"
         else:
-            prog = f"{self.scheduler.driver} -n {self.scheduler.nprocs} -c {self.scheduler.cpus_per_task} python -m mpi4py {_path}"
+            prog = f"{self.scheduler.driver} -n {self.scheduler.nprocs} -c {self.scheduler.cpus_per_task} {self.scheduler.python} -m mpi4py {_path}"
         script += f'PROG="{prog}"\n'
         script += "COMMAND=${tasks[$SLURM_ARRAY_TASK_ID]}\n"
         script += f"SUCCESS_TOKEN={str(self.log_dir / 'success_')}${{SLURM_ARRAY_TASK_ID}}.txt\n"
