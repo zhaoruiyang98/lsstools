@@ -22,6 +22,7 @@ class Scheduler:
     nodes: int = 1
     exclusive: bool = True
     driver: str = "srun"
+    bash_path: str = "/bin/bash"
     prelude: str = ""
 
     def __post_init__(self):
@@ -31,7 +32,7 @@ class Scheduler:
             raise ValueError("partition and queue are mutually exclusive")
 
     def header(self):
-        s = "#!/bin/bash\n"
+        s = f"#!{self.bash_path}\n"
         # fmt: off
         s += (
             f"#SBATCH -N {self.nodes}\n"
