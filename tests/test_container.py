@@ -145,3 +145,6 @@ class TestFramedArray:
 
         exp = fa[[2], 1:, 10].value
         test(fa.sel(i=["cross"], l=slice(2, 4), k=0.11).value)
+
+        exp = fa[:, :, 10].value
+        test(fa.sel(i=slice(None), l=slice(None), k=0.11).value)

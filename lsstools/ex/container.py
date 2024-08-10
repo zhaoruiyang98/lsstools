@@ -1,4 +1,5 @@
 from __future__ import annotations
+import itertools
 import numpy as np
 from copy import deepcopy
 from numpy.lib.mixins import NDArrayOperatorsMixin
@@ -73,15 +74,6 @@ class ArrayEdges(NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
         if np.unique(self.mid).shape != self.mid.shape:
             raise ValueError
 
-    @classmethod
-    def _direct_init(cls, lower, upper, mid, value):
-        obj = cls.__new__(cls)
-        obj.lower = lower
-        obj.upper = upper
-        obj.mid = mid
-        obj.value = value
-        return obj
-
     def __iter__(self):
         return iter((self.lower, self.upper, self.mid))
 
@@ -92,6 +84,25 @@ class ArrayEdges(NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
         s = format_collection(self.mid)[1 + len("array") : -1]
         return f"{type(self).__name__}({s})"
 
+    @classmethod
+    def _direct_init(cls, lower, upper, mid, value):
+        obj = cls.__new__(cls)
+        obj.lower = lower
+        obj.upper = upper
+        obj.mid = mid
+        obj.value = value
+        return obj
+
+    @classmethod
+    def average(cls, arrays: list[ArrayEdges]):
+        if arrays[0].value.dtype.char in (np.typecodes["AllFloat"] + np.typecodes["AllInteger"]):
+            value = np.mean([_.value for _ in arrays], axis=0)
+        else:
+            value = arrays[0].value
+        return cls._direct_init(
+            lower=arrays[0].lower, upper=arrays[0].upper, mid=arrays[0].mid, value=value
+        )
+
     # ndarray api
     def __array__(self, dtype=None, copy=None):
         return np.asarray(self.value, dtype=dtype, copy=copy)
@@ -101,18 +112,18 @@ class ArrayEdges(NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
             nself = sum(isinstance(_, ArrayEdges) for _ in inputs)
             if nself != 1:
                 return NotImplemented
-            inputs = []
+            inputs2 = []
             for x in inputs:
                 if isinstance(x, FramedArray):
                     x = x.value
                 if isinstance(x, ArrayEdges):
                     x = x.value
-                inputs.append(x)
+                inputs2.append(x)
             return type(self)._direct_init(
                 self.lower.copy(),
                 upper=self.upper.copy(),
                 mid=self.mid.copy(),
-                value=ufunc(*inputs, **kwargs),
+                value=ufunc(*inputs2, **kwargs),
             )
         else:
             return NotImplemented
@@ -235,6 +246,7 @@ class FramedArrayLocator:
                     raise NotImplementedError
                 if arg == slice(None, None, None):
                     iargs.append(arg)
+                    iedges += 1
                     continue
                 istart, istop = None, None
                 if arg.start is not None:
@@ -306,7 +318,7 @@ class FramedArray(NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
 
     def vec(self, ignore_nan=True):
         if ignore_nan:
-            return np.ravel(self.value[np.isnan(self.value)])
+            return np.ravel(self.value[~np.isnan(self.value)])
         return np.ravel(self.value)
 
     def where(self, cond, drop=False):
@@ -324,6 +336,13 @@ class FramedArray(NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
             args.append(idx_mapping.get(i, slice(None, None, None)))
         return tuple(args)
 
+    @classmethod
+    def average(cls, arrays: list[FramedArray]):
+        edge_names = arrays[0].edges.keys()
+        edges = {name: ArrayEdges.average([_.edges[name] for _ in arrays]) for name in edge_names}
+        value = np.mean([_.value for _ in arrays], axis=0)
+        return cls(value, edges)
+
     # ndarray api
     def __array__(self, dtype=None, copy=None):
         return np.asarray(self.value, dtype=dtype, copy=copy)
@@ -333,16 +352,134 @@ class FramedArray(NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
             nself = sum(isinstance(_, FramedArray) for _ in inputs)
             if nself != 1:
                 return NotImplemented
-            inputs = []
+            inputs2 = []
             for x in inputs:
                 if isinstance(x, FramedArray):
                     x = x.value
                 if isinstance(x, ArrayEdges):
                     x = x.value
-                inputs.append(x)
-            return type(self)(ufunc(*inputs, **kwargs), deepcopy(self.edges))
+                inputs2.append(x)
+            return type(self)(ufunc(*inputs2, **kwargs), deepcopy(self.edges))
         else:
             return NotImplemented
 
     def __iter__(self):
         return iter(self.value)
+
+
+def _paint_text(
+    ax, text, loc="lower right", x=None, y=None, va=None, ha=None, fontsize="medium", **kwargs
+):
+    match loc:
+        case "lower right":
+            x = x or 0.95
+            y = y or 0.05
+            va = va or "bottom"
+            ha = ha or "right"
+        case "top right":
+            x = x or 0.95
+            y = y or 0.95
+            va = va or "top"
+            ha = ha or "right"
+        case "lower left":
+            x = x or 0.05
+            y = y or 0.05
+            va = va or "bottom"
+            ha = ha or "left"
+        case "top left":
+            x = x or 0.05
+            y = y or 0.95
+            va = va or "top"
+            ha = ha or "left"
+        case _:
+            raise NotImplementedError
+    ax.text(x, y, text, transform=ax.transAxes, va=va, ha=ha, fontsize=fontsize, **kwargs)
+    return ax
+
+
+class CovarianceMatrix(NDArrayAttributesMixin, array="value"):
+    def __init__(self, fa: FramedArray, axes1: tuple[str, ...], axes2: tuple[str, ...]):
+        # XXX: the limitation is it only applies to the multi-tracer case, but not P+B because of different indices
+        self.fa = fa
+        self.axes1 = axes1
+        self.axes2 = axes2
+        if common := set(self.axes1).intersection(self.axes2):
+            s = "axes" if len(common) > 1 else "axis"
+            raise ValueError(f"it is not allowed to have common {s} {common}")
+        if edges := set(self.axes1 + self.axes2).difference(self.fa.edges.keys()):
+            raise ValueError(f"missing edges: {edges}")
+        for x1, x2 in zip(self.axes1, self.axes2):
+            if self.fa.edges[x1].size != self.fa.edges[x2].size:
+                raise ValueError(f"size of edge {x1} and {x2} does not match")
+        edges_names = list(self.fa.edges.keys())
+        src = [edges_names.index(_) for _ in itertools.chain(self.axes1, self.axes2)]
+        dest = [*range(len(self.axes1) + len(self.axes2))]
+        value = np.moveaxis(self.fa.value, src, dest)
+        edges = {_: self.fa.edges[_] for _ in itertools.chain(self.axes1, self.axes2)}
+        self.fa = FramedArray(value, edges)
+        nlen = np.prod([edges[_].size for _ in self.axes1])
+        self.value = self.fa.value.reshape(nlen, -1)
+
+    def select(self, **kwargs):
+        axes = self.axes1 + self.axes2
+        kwargs = {_: kwargs.get(_, slice(None)) for _ in axes}
+        fa = self.fa.sel(**kwargs)
+        axes1 = tuple([_ for _ in self.axes1 if _ in fa.edges])
+        axes2 = tuple([_ for _ in self.axes2 if _ in fa.edges])
+        return type(self)(fa, axes1, axes2)
+
+    def to_corr(self):
+        cov = self.value
+        d = np.sqrt(np.diag(cov))
+        with np.errstate(divide="ignore", invalid="ignore"):
+            corr = cov / np.outer(d, d)
+        corr[~np.isfinite(corr)] = 0.0
+        corr_array = corr.reshape(self.fa.shape)
+        fa = FramedArray(corr_array, edges=self.fa.edges)
+        return type(self)(fa, self.axes1, self.axes2)
+
+    def corrplot(self, cov2: CovarianceMatrix | None = None, labels=None, show=True):
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+        corr1 = self.to_corr().value
+        corr2 = corr1 if cov2 is None else cov2.to_corr().value
+        corr = np.triu(corr1) + np.tril(corr2, k=-1)
+        fig, ax = plt.subplots()
+        if labels:
+            if isinstance(labels, (tuple, list)):
+                _paint_text(ax, labels[0], loc="lower right", fontsize="x-large")
+                if cov2 is not None:
+                    _paint_text(ax, labels[1], loc="top left", fontsize="x-large")
+            else:
+                _paint_text(ax, labels, loc="lower right", fontsize="x-large")
+        im = ax.imshow(corr, vmin=-1, vmax=1, cmap="bwr", origin="lower")
+        cax = make_axes_locatable(ax).append_axes("right", size="5%", pad=0.2)
+        fig.colorbar(im, cax=cax)
+        if show:
+            plt.show()
+        return fig, ax
+
+    def __repr__(self) -> str:
+        edges = self.fa.edges
+        axes1 = self.axes1
+        axes2 = self.axes2
+        s1 = ", ".join([f"{k}: {v.size}" for k, v in zip(axes1, [edges[_] for _ in axes1])])
+        s2 = ", ".join([f"{k}: {v.size}" for k, v in zip(axes2, [edges[_] for _ in axes2])])
+        return f"<{type(self).__name__} ({s1}) ({s2})>"
+
+    @classmethod
+    def from_arrays(cls, arrays: list[FramedArray], axes1: tuple[str, ...], axes2: tuple[str, ...]):
+        data_vector = [x.vec(ignore_nan=False) for x in arrays]
+        cov = np.cov(data_vector, rowvar=False)
+        shape = arrays[0].shape
+        edge_names = arrays[0].edges.keys()
+        edge_values = [ArrayEdges.average([_.edges[name] for _ in arrays]) for name in edge_names]
+        edges = {
+            k: v
+            for k, v in zip(
+                itertools.chain(axes1, axes2), itertools.chain(edge_values, edge_values)
+            )
+        }
+        value = FramedArray(cov.reshape(shape + shape), edges=edges)
+        return cls(value, axes1, axes2)
