@@ -5,7 +5,7 @@ import inspect
 import os
 import subprocess
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import get_type_hints
 from ..static_typing import *
@@ -57,6 +57,9 @@ class Scheduler:
         if self.exclusive:
             s += f"#SBATCH --exclusive\n"
         return s
+
+    def clone(self, **kwargs):
+        return type(self)(**(asdict(self) | kwargs))
 
 
 def is_typer_argument(hint):
