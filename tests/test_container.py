@@ -148,3 +148,14 @@ class TestFramedArray:
 
         exp = fa[:, :, 10].value
         test(fa.sel(i=slice(None), l=slice(None), k=0.11).value)
+
+    def test_save_and_load(self, tmp_path):
+        kedges = np.arange(0.0, 0.20 + 0.01 / 2, 0.01)
+        ii = ArrayEdges(["pre", "post", "cross"])
+        il = ArrayEdges([0, 2, 4])
+        ik = ArrayEdges(kedges[:-1], kedges[1:])
+        fa = FramedArray(np.random.random((3, 3, 20)), edges={"i": ii, "l": il, "k": ik})
+        filename = tmp_path / "test.pickle"
+        fa.save(filename)
+        fa2 = FramedArray.load(filename)
+        np.testing.assert_allclose(fa.value, fa2.value)

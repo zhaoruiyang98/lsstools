@@ -1,4 +1,4 @@
-lsstools.utils
+﻿lsstools.utils
 ==============
 
 .. automodule:: lsstools.utils
@@ -19,6 +19,13 @@ lsstools.utils
 
 
    
+
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:
+   
+      Picklable
 
 
 

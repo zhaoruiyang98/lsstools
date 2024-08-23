@@ -1,4 +1,4 @@
-lsstools.log
+﻿lsstools.log
 ============
 
 .. automodule:: lsstools.log
@@ -15,6 +15,7 @@ lsstools.log
       :toctree:
    
       get_mpi_logger
+      log_root_only
 
 
 

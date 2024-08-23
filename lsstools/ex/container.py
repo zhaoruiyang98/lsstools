@@ -4,7 +4,7 @@ import numpy as np
 from copy import deepcopy
 from numpy.lib.mixins import NDArrayOperatorsMixin
 from ..static_typing import *
-from ..utils import format_collection
+from ..utils import format_collection, Picklable
 
 
 def monotonic(array):
@@ -47,7 +47,7 @@ class NDArrayAttributesMixin:
         return getattr(self, self._array).strides
 
 
-class ArrayEdges(NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
+class ArrayEdges(Picklable, NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
     @overload
     def __init__(self, mid, /): ...
     @overload
@@ -262,7 +262,7 @@ class FramedArrayLocator:
         return self.fa[tuple(iargs)]
 
 
-class FramedArray(NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
+class FramedArray(Picklable, NDArrayOperatorsMixin, NDArrayAttributesMixin, array="value"):
     """Numpy-like array with edges.
 
     See Also
@@ -397,7 +397,7 @@ def _paint_text(
     return ax
 
 
-class CovarianceMatrix(NDArrayAttributesMixin, array="value"):
+class CovarianceMatrix(Picklable, NDArrayAttributesMixin, array="value"):
     def __init__(self, fa: FramedArray, axes1: tuple[str, ...], axes2: tuple[str, ...]):
         # XXX: the limitation is it only applies to the multi-tracer case, but not P+B because of different indices
         self.fa = fa

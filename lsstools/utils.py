@@ -1,4 +1,5 @@
 import math
+import pickle
 from .static_typing import *
 
 
@@ -50,3 +51,18 @@ def format_collection(c: Collection, nmax: int = 5, sep: str = ", ") -> str:
         items.insert(ileft, "...")
         smid = sep.join(items)
     return f"{sbegin}{smid}{send}"
+
+
+class Picklable:
+    """Load and save with pickle."""
+
+    def save(self, path):
+        """Save to file."""
+        with open(path, "wb") as f:
+            pickle.dump(self, f, protocol=-1)
+
+    @classmethod
+    def load(cls, path):
+        """Load from file."""
+        with open(path, "rb") as f:
+            return pickle.load(f)
