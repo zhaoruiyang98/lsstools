@@ -45,7 +45,7 @@ class StaticMapping(Mapping):
 
 
 class NestedDict(UserDict):
-    """A dictionary supporting access to elements using `x.y.z`-style keys."""
+    """A dictionary with supports for accessing elements using `x.y.z`-style keys."""
 
     def __getitem__(self, key) -> Any:
         keys = key.split(".")

@@ -22,6 +22,7 @@ class Scheduler:
     account: str | None = None
     nodes: int = 1
     exclusive: bool = True
+    mem: str | None = "0"
     driver: str = "srun"
     python: str = "python"
     bash_path: str = "/bin/bash"
@@ -39,8 +40,9 @@ class Scheduler:
         s += (
             f"#SBATCH -N {self.nodes}\n"
             f"#SBATCH -n {self.nprocs}\n"
-            f"#SBATCH --mem=0\n"
         )
+        if self.mem is not None:
+            s += f"#SBATCH --mem={self.mem}\n"
         # fmt: on
         if self.cpus_per_task is not None:
             s += f"#SBATCH -c {self.cpus_per_task}\n"

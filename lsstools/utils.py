@@ -2,6 +2,11 @@ import math
 import pickle
 from .static_typing import *
 
+try:
+    from typing_extensions import Self
+except ImportError:
+    pass
+
 
 def format_collection(c: Collection, nmax: int = 5, sep: str = ", ") -> str:
     """Format a python collection object.
@@ -62,7 +67,7 @@ class Picklable:
             pickle.dump(self, f, protocol=-1)
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path) -> "Self":
         """Load from file."""
         with open(path, "rb") as f:
             return pickle.load(f)
