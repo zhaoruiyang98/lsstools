@@ -1,11 +1,11 @@
 :orphan:
 
-lsstools.log.MPILogger.handle
+lsstools.log.MPIFilter.filter
 =============================
 
 .. currentmodule:: lsstools.log
 
 method
 
-.. automethod:: lsstools.log.MPILogger.handle
+.. automethod:: lsstools.log.MPIFilter.filter
 

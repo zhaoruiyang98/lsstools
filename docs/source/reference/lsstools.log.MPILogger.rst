@@ -13,22 +13,16 @@ lsstools.log.MPILogger
       
          MPILogger.addFilter
          MPILogger.addHandler
-         MPILogger.callHandlers
          MPILogger.critical
          MPILogger.debug
          MPILogger.error
          MPILogger.exception
-         MPILogger.fatal
-         MPILogger.filter
-         MPILogger.findCaller
-         MPILogger.getChild
          MPILogger.getEffectiveLevel
-         MPILogger.handle
          MPILogger.hasHandlers
          MPILogger.info
          MPILogger.isEnabledFor
          MPILogger.log
-         MPILogger.makeRecord
+         MPILogger.process
          MPILogger.removeFilter
          MPILogger.removeHandler
          MPILogger.setLevel
@@ -44,5 +38,5 @@ lsstools.log.MPILogger
          :toctree:
       
          MPILogger.manager
-         MPILogger.root
+         MPILogger.name
 

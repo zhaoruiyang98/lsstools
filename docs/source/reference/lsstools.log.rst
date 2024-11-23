@@ -26,6 +26,7 @@
    .. autosummary::
       :toctree:
    
+      MPIFilter
       MPILogger
 
 
